@@ -1,1 +1,417 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thợ Săn Phép Tính</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            overflow: hidden;
+            background: #4c1d95; 
+            color: white;
+            margin: 0;
+            touch-action: none;
+        }
 
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: none; 
+        }
+
+        canvas {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+            display: block;
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: all;
+            z-index: 10;
+            cursor: default;
+        }
+
+        .btn {
+            background: #fbbf24;
+            color: #1e293b;
+            padding: 16px 60px;
+            border-radius: 9999px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 4px solid white;
+            font-size: 1.5rem;
+            box-shadow: 0 10px 25px rgba(251, 191, 36, 0.4);
+        }
+
+        .btn:hover {
+            background: #f59e0b;
+            transform: scale(1.05);
+        }
+
+        .math-bubble {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            border-radius: 25px;
+            border: 3px solid white;
+            font-size: 2rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .rule-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 20px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .icon-box {
+            font-size: 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div class="flex justify-between items-start">
+            <div class="bg-black/40 p-3 rounded-xl border-l-4 border-yellow-400 backdrop-blur-md">
+                <p class="text-[10px] font-bold text-yellow-300 uppercase tracking-tighter">Điểm Số</p>
+                <p id="scoreLabel" class="text-3xl font-black">0</p>
+            </div>
+            <div id="mathDisplay" class="math-bubble">...</div>
+            <div class="bg-black/40 p-3 rounded-xl border-r-4 border-red-400 text-right backdrop-blur-md">
+                <p class="text-[10px] font-bold text-red-300 uppercase tracking-tighter">Mạng</p>
+                <div id="livesContainer" class="flex gap-1 justify-end text-2xl">❤️❤️❤️</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Màn hình luật chơi -->
+    <div id="startScreen" class="overlay p-6">
+        <h1 class="text-5xl font-black mb-6 text-center text-white">
+            LUẬT CHƠI <span class="text-yellow-400">THỢ SĂN</span>
+        </h1>
+        
+        <div class="max-w-lg w-full">
+            <div class="rule-card border-l-4 border-blue-400">
+                <div class="icon-box">🖱️</div>
+                <div>
+                    <h3 class="font-bold text-blue-300 uppercase text-xs">Di chuyển</h3>
+                    <p class="text-sm opacity-90 font-medium">Di chuyển chuột hoặc vuốt tay để điều khiển nhân vật bay tự do 2 chiều.</p>
+                </div>
+            </div>
+
+            <div class="rule-card border-l-4 border-green-400">
+                <div class="icon-box">🎯</div>
+                <div>
+                    <h3 class="font-bold text-green-300 uppercase text-xs">Mục tiêu</h3>
+                    <p class="text-sm opacity-90 font-medium">Chạm vào bóng có số <b>ĐÚNG</b> với phép tính hiển thị phía trên.</p>
+                </div>
+            </div>
+
+            <div class="rule-card border-l-4 border-red-400">
+                <div class="icon-box">⚠️</div>
+                <div>
+                    <h3 class="font-bold text-red-300 uppercase text-xs">Lưu ý</h3>
+                    <p class="text-sm opacity-90 font-medium">Chạm vào số sai hoặc để số đúng rơi mất sẽ bị <b>MẤT 1 MẠNG</b>.</p>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn mt-6" onclick="startGame()">TÔI ĐÃ HIỂU!</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="overlay hidden">
+        <h2 class="text-6xl font-black text-red-500 mb-2">HẾT LƯỢT!</h2>
+        <p class="text-2xl text-white font-bold">Kỷ lục của bạn:</p>
+        <p id="finalScore" class="text-9xl font-black text-yellow-400 mb-8 drop-shadow-lg">0</p>
+        <button class="btn" onclick="startGame()">CHƠI LẠI</button>
+    </div>
+</div>
+
+<script>
+    // --- Audio System (Tạo âm thanh bằng code) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(freq, type, duration, vol = 0.1) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    const sounds = {
+        correct: () => { 
+            playSound(523.25, 'triangle', 0.2); 
+            setTimeout(() => playSound(659.25, 'triangle', 0.2), 80); 
+        },
+        wrong: () => { 
+            playSound(120, 'sawtooth', 0.3, 0.15); 
+        },
+        gameOver: () => { 
+            playSound(300, 'square', 0.5); 
+            setTimeout(() => playSound(150, 'square', 0.8), 300); 
+        }
+    };
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const startScreen = document.getElementById('startScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const finalScore = document.getElementById('finalScore');
+    const mathDisplay = document.getElementById('mathDisplay');
+    const livesContainer = document.getElementById('livesContainer');
+
+    let gameActive = false;
+    let score = 0;
+    let lives = 3;
+    let player = { x: 0, y: 0, radius: 35 };
+    let targets = [];
+    let particles = [];
+    let currentProblem = { question: '', answer: 0 };
+    let frameId;
+    let spawnTimer = 0;
+    let difficulty = 1;
+    let targetX = 0, targetY = 0;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        if (!gameActive) {
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            targetX = player.x; targetY = player.y;
+        }
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const updateInputPos = (x, y) => { targetX = x; targetY = y; };
+    window.addEventListener('mousemove', (e) => updateInputPos(e.clientX, e.clientY));
+    window.addEventListener('touchmove', (e) => {
+        updateInputPos(e.touches[0].clientX, e.touches[0].clientY);
+        e.preventDefault();
+    }, { passive: false });
+
+    function createExplosion(x, y, color) {
+        for (let i = 0; i < 15; i++) {
+            particles.push({
+                x, y, 
+                vx: (Math.random() - 0.5) * 15, 
+                vy: (Math.random() - 0.5) * 15,
+                radius: Math.random() * 6 + 2, 
+                color, 
+                life: 1.0
+            });
+        }
+    }
+
+    function generateProblem() {
+        const types = ['+', '-', '*'];
+        const type = types[Math.floor(Math.random() * (score > 50 ? 3 : 2))];
+        let a, b, q, ans;
+        if (type === '+') {
+            a = Math.floor(Math.random() * 25) + 5; b = Math.floor(Math.random() * 25) + 5;
+            ans = a + b; q = `${a} + ${b} = ?`;
+        } else if (type === '-') {
+            a = Math.floor(Math.random() * 40) + 20; b = Math.floor(Math.random() * 20) + 1;
+            ans = a - b; q = `${a} - ${b} = ?`;
+        } else {
+            a = Math.floor(Math.random() * 8) + 2; b = Math.floor(Math.random() * 9) + 2;
+            ans = a * b; q = `${a} × ${b} = ?`;
+        }
+        currentProblem = { question: q, answer: ans };
+        mathDisplay.innerText = q;
+        mathDisplay.animate([
+            { transform: 'scale(1.2)', opacity: 0.5 },
+            { transform: 'scale(1)', opacity: 1 }
+        ], { duration: 300 });
+    }
+
+    function createTarget() {
+        const isCorrect = Math.random() > 0.75;
+        let value = isCorrect ? currentProblem.answer : currentProblem.answer + (Math.floor(Math.random() * 15) - 7);
+        if (!isCorrect && value === currentProblem.answer) value += (Math.random() > 0.5 ? 2 : -2);
+
+        targets.push({
+            x: Math.random() * (canvas.width - 100) + 50, y: -60,
+            value, isCorrect: value === currentProblem.answer,
+            speed: (Math.random() * 1.5 + 2.5) * difficulty,
+            radius: 40, 
+            hue: Math.random() * 360
+        });
+    }
+
+    function update() {
+        if (!gameActive) return;
+        
+        // Di chuyển mượt mà
+        player.x += (targetX - player.x) * 0.15;
+        player.y += (targetY - player.y) * 0.15;
+        
+        // Giới hạn biên
+        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+        player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+        spawnTimer++;
+        if (spawnTimer > 85 / difficulty) { createTarget(); spawnTimer = 0; }
+
+        particles.forEach((p, i) => {
+            p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+            if (p.life <= 0) particles.splice(i, 1);
+        });
+
+        for (let i = targets.length - 1; i >= 0; i--) {
+            let t = targets[i]; 
+            t.y += t.speed;
+            
+            const dist = Math.hypot(player.x - t.x, player.y - t.y);
+            if (dist < player.radius + t.radius) {
+                if (t.isCorrect) {
+                    score += 10; scoreLabel.innerText = score;
+                    difficulty += 0.03; sounds.correct();
+                    createExplosion(t.x, t.y, '#fbbf24');
+                    generateProblem();
+                    targets = targets.filter(item => !item.isCorrect || item === t);
+                } else {
+                    sounds.wrong(); createExplosion(t.x, t.y, '#f87171');
+                    loseLife();
+                }
+                targets.splice(i, 1); continue;
+            }
+            
+            if (t.y > canvas.height + 60) {
+                if (t.isCorrect) { 
+                    sounds.wrong(); 
+                    loseLife(); 
+                    generateProblem(); 
+                }
+                targets.splice(i, 1);
+            }
+        }
+        draw();
+        frameId = requestAnimationFrame(update);
+    }
+
+    function loseLife() {
+        lives--; updateLivesUI();
+        if (lives <= 0) endGame();
+    }
+
+    function updateLivesUI() { livesContainer.innerText = '❤️'.repeat(lives); }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Vẽ hạt vụn
+        particles.forEach(p => {
+            ctx.globalAlpha = p.life; ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color; ctx.fill();
+        });
+        ctx.globalAlpha = 1.0;
+
+        // Vẽ Player
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        const pulse = Math.sin(Date.now() / 150) * 8;
+        const grad = ctx.createRadialGradient(0, 0, 5, 0, 0, player.radius + 15 + pulse);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 0.5)'); 
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(0, 0, player.radius + 15 + pulse, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.beginPath(); ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b'; ctx.strokeStyle = 'white'; ctx.lineWidth = 4; ctx.fill(); ctx.stroke();
+        
+        const eyeX = (targetX - player.x) * 0.06, eyeY = (targetY - player.y) * 0.06;
+        ctx.fillStyle = 'white'; 
+        ctx.beginPath(); ctx.arc(-12+eyeX, -5+eyeY, 7, 0, Math.PI * 2); ctx.arc(12+eyeX, -5+eyeY, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#4c1d95'; 
+        ctx.beginPath(); ctx.arc(-12+eyeX, -5+eyeY, 3, 0, Math.PI * 2); ctx.arc(12+eyeX, -5+eyeY, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+
+        // Vẽ Bóng số
+        targets.forEach(t => {
+            ctx.beginPath(); ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `hsla(${t.hue}, 80%, 65%, 0.9)`; ctx.strokeStyle = 'white'; ctx.lineWidth = 3; ctx.fill(); ctx.stroke();
+            
+            ctx.beginPath(); ctx.arc(t.x - 12, t.y - 12, 6, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
+
+            ctx.fillStyle = 'white'; ctx.font = 'bold 32px Quicksand'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowBlur = 5; ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.fillText(t.value, t.x, t.y);
+            ctx.shadowBlur = 0;
+        });
+    }
+
+    function startGame() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        score = 0; lives = 3; difficulty = 1; targets = []; particles = []; gameActive = true;
+        scoreLabel.innerText = '0'; updateLivesUI(); generateProblem();
+        startScreen.classList.add('hidden'); gameOverScreen.classList.add('hidden');
+        resize(); update();
+    }
+
+    function endGame() {
+        gameActive = false; sounds.gameOver(); cancelAnimationFrame(frameId);
+        finalScore.innerText = score; gameOverScreen.classList.remove('hidden');
+    }
+</script>
+</body>
+</html>
